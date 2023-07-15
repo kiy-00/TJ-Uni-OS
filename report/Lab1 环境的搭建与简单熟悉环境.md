@@ -190,26 +190,23 @@
     #include "user/user.h"
     
     int main(int argc, char *argv[]) {
-      int pid;
-      int pipes1[2], pipes2[2];
+      int pid;	//进程标识符
+      int pipes1[2], pipes2[2];	//用于储存管道的文件描述符
       char buf[] = {'a'};
       pipe(pipes1);
       pipe(pipes2);
+        //创建两个管道
     
-      int ret = fork();
+      int ret = fork();	//创建一个子进程
     
-      // parent send in pipes1[1], child receives in pipes1[0]
-      // child send in pipes2[1], parent receives in pipes2[0]
-      // should have checked close & read & write return value for error, but i am
-      // lazy
-      if (ret == 0) {
+      if (ret == 0) {	//如果创建成功，说明当前进程是子进程
         // i am the child
-        pid = getpid();
-        close(pipes1[1]);
-        close(pipes2[0]);
-        read(pipes1[0], buf, 1);
+        pid = getpid();		//获取进程标识符
+        close(pipes1[1]);	//关闭父进程管道的输入端
+        close(pipes2[0]);	//关闭子进程管道的输出端
+        read(pipes1[0], buf, 1);	//从父进程管道的输出端读取一个字节
         printf("%d: received ping\n", pid);
-        write(pipes2[1], buf, 1);
+        write(pipes2[1], buf, 1);	//在子进程管道的输入端写入这个字节
         exit(0);
       } else {
         // i am the parent
@@ -484,3 +481,21 @@
 
 
 * <img src="C:\Users\yi'k\AppData\Roaming\Typora\typora-user-images\image-20230715141139782.png" alt="image-20230715141139782" style="zoom:67%;" />
+
+
+
+### 实验中遇到的问题
+
+* 实现pingpong时因为不理解管道的机制，导致字节未交换成功
+  * 解决方案：上网查找资料了解管道的运行机制，理解别人的代码后尝试自己写一遍。
+* 不理解main函数中两个参数的具体意义，导致面对实验题目时手足无措
+  * 解决方案
+    * 上网查找相关资料，了解到它们分别代表参数的个数和参数内容
+    * 熟悉qemu的文件结构，了解自己可以调用的系统函数有哪些，每一个函数有什么作用
+    * 熟悉基本的命令行操作，以便更好更快的测试程序
+
+
+
+### 实验心得
+
+xv6是一个小型操作系统，但是其基本功能已经完备。配合网上的资料耐心地阅读源码，加上自己动手尝试。我对操作系统与硬件和用户程序的关系，以及它们之间如何进行交互有了更深的理解。
