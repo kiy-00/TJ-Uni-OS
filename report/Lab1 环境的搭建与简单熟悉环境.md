@@ -163,7 +163,7 @@
 
 
 
-### pingpong：利用系统调用函数fork和pipe在父进程和子进程前交换一个字节
+### pingpong：利用系统调用函数fork和pipe在父进程和子进程之间交换一个字节
 
 * 关于fork和pipe
 
@@ -239,75 +239,74 @@
     #include "kernel/types.h"
     #include "user/user.h"
     
-    /*
-     * Run as a prime-number processor
-     * the listenfd is from your left neighbor
-     */
+    
     void runprocess(int listenfd) {
-      int my_num = 0;
-      int forked = 0;
-      int passed_num = 0;
-      int pipes[2];
+      int my_num = 0;	//初始化当前质数为0
+      int forked = 0;	//初始化是否已经fork子进程的标志位为0
+      int passed_num = 0;	//初始化传递的数为0
+      int pipes[2];	//定义管道
       while (1) {
         int read_bytes = read(listenfd, &passed_num, 4);
+          //listenfd:要读取（监听）的文件描述符
+          //passed_num:指向用于存储读取数据的缓冲区的指针
+          //读取listenfd的值（4字节）到passed_num，并把读取的字节数存入read_bytes
     
-        // left neighbor has no more number to provide
+           //如果读取的字节数为0，说明左邻居没有更多的数值提供
         if (read_bytes == 0) {
           close(listenfd);
-          if (forked) {
-            // tell my children I have no more number to offer
-            close(pipes[1]);
-            // wait my child termination
+            //关闭文件描述符listenfd
+          if (forked) {	//如果已经fork过子进程
+            close(pipes[1]);	//关闭管道的写入端，告诉子进程没有更多的数值提供
             int child_pid;
-            wait(&child_pid);
+            wait(&child_pid);	//等待子进程终止
           }
           exit(0);
         }
     
-        // if my initial read
-        if (my_num == 0) {
-          my_num = passed_num;
-          printf("prime %d\n", my_num);
+        if (my_num == 0) {//如果这是第一次读取
+          my_num = passed_num; //把传递的数作为当前的质数
+          printf("prime %d\n", my_num);//打印质数
         }
     
-        // not my prime multiple, pass along
-        if (passed_num % my_num != 0) {
-          if (!forked) {
-            pipe(pipes);
-            forked = 1;
-            int ret = fork();
-            if (ret == 0) {
-              // i am the child
-              close(pipes[1]);
-              close(listenfd);
-              runprocess(pipes[0]);
+        if (passed_num % my_num != 0) {	//如果传递的数不是当前质数的倍数，那么就传递给下一个进程
+          if (!forked) {//如果还没有fork过子进程
+            pipe(pipes);//创建一个管道
+            forked = 1; //设置forked标志位为1
+            int ret = fork();//fork一个子进程，并把子进程的pid存入ret
+            if (ret == 0) {//如果是子进程
+                
+              close(pipes[1]);//关闭管道的写入端
+              close(listenfd); //关闭文件描述符listenfd
+              runprocess(pipes[0]);//递归调用runprocess函数
             } else {
-              // i am the parent
-              close(pipes[0]);
+                
+              close(pipes[0]);//如果是父进程，关闭管道的读取端
             }
           }
     
-          // pass the number to right neighbor
+          //向管道写入传递的数值，把数值传递给下一个进程
           write(pipes[1], &passed_num, 4);
         }
       }
     }
     
     int main(int argc, char *argv[]) {
-      int pipes[2];
-      pipe(pipes);
-      for (int i = 2; i <= 35; i++) {
-        write(pipes[1], &i, 4);
+      int pipes[2];//定义管道
+      pipe(pipes); //创建管道
+      for (int i = 2; i <= 35; i++) {//初始化从2到35的整数
+        write(pipes[1], &i, 4);//向管道中写入整数
       }
-      close(pipes[1]);
-      runprocess(pipes[0]);
+      close(pipes[1]);//写入完成后，关闭管道的写入端
+      runprocess(pipes[0]);//调用runprocess函数，开始筛选质数
       exit(0);
     }
     ```
-
+    
   * 加入makefile中
+  
+  * ![image-20230719215552232](C:\Users\yi'k\AppData\Roaming\Typora\typora-user-images\image-20230719215552232.png)
 
-
+<img src="C:\Users\yi'k\AppData\Roaming\Typora\typora-user-images\image-20230719215612075.png" alt="image-20230719215612075" style="zoom:50%;" />
 
 ### find：给定一个初始路径和目标文件名, 要不断递归的扫描找到所有子目录前匹配的文件全路径
 
